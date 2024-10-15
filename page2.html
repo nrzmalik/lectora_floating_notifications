@@ -1,0 +1,776 @@
+<script>
+(function(window) {
+    const NrzNotif = {
+      container: null,
+      options: {
+        position: 'top-right',
+        maxNotifications: 5,
+        animationDuration: 300
+      },
+      notifications: [],
+  
+      init() {
+        this.container = this.createContainer();
+        document.body.appendChild(this.container);
+        this.addStyles();
+      },
+  
+      createContainer() {
+        const container = document.createElement('div');
+        container.className = `nrz-notif-container ${this.options.position}`;
+        return container;
+      },
+  
+      addStyles() {
+        const style = document.createElement('style');
+        style.textContent = `
+          .nrz-notif-container {
+            position: fixed;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 350px;
+            width: 100%;
+            padding: 10px;
+          }
+          .nrz-notif-container.top-right { top: 0; right: 0; }
+          .nrz-notif-container.top-left { top: 0; left: 0; }
+          .nrz-notif-container.bottom-right { bottom: 0; right: 0; }
+          .nrz-notif-container.bottom-left { bottom: 0; left: 0; }
+          .nrz-notif {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            overflow: hidden;
+            transition: all ${this.options.animationDuration}ms ease-in-out;
+            max-height: 0;
+            opacity: 0;
+          }
+          .nrz-notif.show {
+            max-height: 200px;
+            opacity: 1;
+          }
+          .nrz-notif-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 50px;
+            color: #fff;
+          }
+          .nrz-notif-content {
+            flex-grow: 1;
+            padding: 12px;
+          }
+          .nrz-notif-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 5px;
+          }
+          .nrz-notif-message {
+            font-size: 14px;
+          }
+          .nrz-notif-close {
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            font-size: 20px;
+            padding: 5px;
+            align-self: flex-start;
+          }
+        `;
+        document.head.appendChild(style);
+      },
+  
+      show(message, type = 'info', timeout = 5000) {
+        if (!this.container) {
+          this.init();
+        }
+  
+        if (this.notifications.length >= this.options.maxNotifications) {
+          this.close(this.notifications[0]);
+        }
+  
+        const notif = document.createElement('div');
+        notif.className = 'nrz-notif';
+        const data = this.getTypeData(type);
+  
+        notif.innerHTML = `
+          <div class="nrz-notif-icon" style="background-color: ${data.color}">
+            ${this.getIcon(type)}
+          </div>
+          <div class="nrz-notif-content">
+            <div class="nrz-notif-title">${data.title}</div>
+            <div class="nrz-notif-message">${message}</div>
+          </div>
+          <button class="nrz-notif-close">&times;</button>
+        `;
+  
+        this.container.appendChild(notif);
+        this.notifications.push(notif);
+  
+        setTimeout(() => notif.classList.add('show'), 10);
+  
+        const closeBtn = notif.querySelector('.nrz-notif-close');
+        closeBtn.addEventListener('click', () => this.close(notif));
+  
+        if (timeout > 0) {
+          setTimeout(() => this.close(notif), timeout);
+        }
+      },
+  
+      close(notif) {
+        notif.classList.remove('show');
+        setTimeout(() => {
+          notif.remove();
+          this.notifications = this.notifications.filter(n => n !== notif);
+        }, this.options.animationDuration);
+      },
+  
+      getTypeData(type) {
+        const types = {
+          success: { color: '#28a745', title: 'Success' },
+          error: { color: '#dc3545', title: 'Error' },
+          warning: { color: '#ffc107', title: 'Warning' },
+          question: { color: '#6c757d', title: 'Question' },
+          info: { color: '#17a2b8', title: 'Information' }
+        };
+        return types[type] || types.info;
+      },
+  
+      getIcon(type) {
+        const icons = {
+          success: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',
+          error: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>',
+          warning: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>',
+          question: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>',
+          info: '<svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>'
+        };
+        return icons[type] || icons.info;
+      }
+    };
+  
+    window.nrzNotif = NrzNotif.show.bind(NrzNotif);
+  })(window);
+</script>
+<!DOCTYPE html>
+<html lang="en">
+
+
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta charset="utf-8" />
+<meta name="viewport" content=" minimum-scale = 1.0 , initial-scale= 1" />
+<title>Page 1</title>
+
+<link rel="stylesheet" href="trivantis.css" type="text/css"/>
+<style type="text/css">
+  .trivInputLL { margin : 0px 0px 0px 9px; padding : 0px; display : inline-block; vertical-align : middle; }
+  .trivInputLR { margin : 0px 9px 0px 3px; padding : 0px; display : inline-block; vertical-align : middle; }
+  .trivInputNL { margin : 0px 0px 0px 3px; padding : 0px; display : inline-block; vertical-align : middle; }
+</style>
+
+<script src="trivantis.js"></script>
+<script src="trivantis-timedate.js"></script>
+<script src="es6-promise-2.0.0.min.js"></script>
+<script src="jquery-3.6.0.min.js"></script>
+<script src="trivantis-cookie.js"></script>
+<script src="trivantis-button.js"></script>
+<script src="trivantis-image.js"></script>
+<script src="trivantis-inline.js"></script>
+<script src="trivantis-text.js"></script>
+<script src="trivantis-trans.js"></script>
+<script src="trivantis-pagetracking.js"></script>
+<script src="trivantis-buttontracking.js"></script>
+<script src="device_desktop/page2.js"></script>
+<script src="device_tablet/page2.js"></script>
+<script src="device_phone/page2.js"></script>
+<script src="trivantis-strings.js"></script>
+<script src="hammer.js"></script>
+<script>
+
+<!-- 
+
+var hmr = null;
+function initGEV(){
+   hmr = new Hammer(getDisplayDocument().getElementById(GetCurrentPageID()));
+}
+
+var trivPageScope = {};
+var pgID = 'page2';
+trivWeb20Popups = true;
+var trivPlayer = null;
+var bPageLoaded = false;
+var pageScale = 1;
+var bDisableBrowserResize = false;
+var bScaleToWindow = false;
+var bFitToWidth = false;
+var bFitToMobile = false;
+var iScaleMaxWidth = 0;
+var lTimelineStart  = -1;
+var lTimelineFinish  = 60000;
+var pageHeight = 932;
+var pageWidth = 430;
+var bLoadedVariables = false;
+
+var arObjs = [];
+
+if(bDisableBrowserResize && !is.isMobile.any()){
+	var bTrivResponsive = false;
+	saveResponsiveData("Desktop",eval("DesktopResponsive"));
+}
+else{
+	var bTrivResponsive = true;
+	saveResponsiveData("Desktop",eval("DesktopResponsive"));
+	saveResponsiveData("Tablet",eval("TabletResponsive"));
+	saveResponsiveData("Phone",eval("PhoneResponsive"));
+}
+	var viewOverrideMap = {};
+	viewOverrideMap["PhonePortrait"] = "TabletPortrait";
+ 	viewOverrideMap["PhoneLandscape"] = "TabletLandscape";
+ 	viewOverrideMap["TabletPortrait"] = "Desktop";
+ 	viewOverrideMap["TabletLandscape"] = "Desktop";
+ if( !is.min )
+  document.write( '<div class="noti" style="margin: 15px 0; box-shadow: 0 0 8px #888; background: #FFF4F4; text-align: center; padding: 2px;width: 750px;margin: auto;text-align: left;position: relative;clear: both;margin-bottom: 25px; font-family: &apos;Open Sans&apos;, sans-serif"><div class="whatnow" style="text-align: center; margin: 13px 25px; font-size: 20px; font-weight: 400;"><p style="margin: 13px 10px;">Your browser is out-of-date.<p><p style="margin: 13px 10px;">Please download one of these up-to-date, free and excellent browsers for viewing this learning object:</p></div><table class="logos" id="browserlist" style="width: 100%; border: none;"><tbody><tr><td class="b" style="vertical-align: top;padding: 10px;border: none;background: none;width: 25%;"><a class="l" style="display: block;padding: 4px;background-repeat: no-repeat;background-size: 110px auto;background-position: center 4px;text-decoration: underline;text-align: center;border: 2px solid transparent;position: relative;font-size: 1.8em" href="https://www.microsoft.com/en-us/windows/microsoft-edge" target="_blank" rel="noopener" title="Download updated Edge web browser from official Microsoft website!">Edge</a></td><td class="b" style="vertical-align: top;padding: 10px;border: none;background: none;width: 25%;"><a class="l" style="display: block;padding: 4px;background-repeat: no-repeat;background-size: 110px auto;background-position: center 4px;text-decoration: underline;text-align: center;border: 2px solid transparent;position: relative;font-size: 1.8em" href="https://www.mozilla.org/firefox/" target="_blank" rel="noopener" title="Download updated Firefox web browser from official Mozilla Foundation website!">Firefox</a></td><td class="b" style="vertical-align: top;padding: 10px;border: none;background: none;width: 25%;"><a class="l" style="display: block;padding: 4px;background-repeat: no-repeat;background-size: 110px auto;background-position: center 4px;text-decoration: underline;text-align: center;border: 2px solid transparent;position: relative;font-size: 1.8em" href="https://www.google.com/chrome/browser/desktop/" target="_blank" rel="noopener" title="Download updated Chrome web browser from official Google website!">Chrome</a></td><td class="b" style="vertical-align: top;padding: 10px;border: none;background: none;width: 25%;"><a class="l" style="display: block;padding: 4px;background-repeat: no-repeat;background-size: 110px auto;background-position: center 4px;text-decoration: underline;text-align: center;border: 2px solid transparent;position: relative;font-size: 1.8em" href="https://support.apple.com/downloads/safari" target="_blank" rel="noopener" title="Download updated Safari web browser from official Apple website!">Safari</a></td></tr></tbody></table><div class="whatnow" style="text-align: center;margin: 13px 25px;font-size: 20px;font-weight: 400;"><p>For more security, speed and comfort</p></div><div class="whatnow-small" style="font-size: 15px;margin: 13px;text-align: center;font-weight: 300;"><p>The download is safe from the vendor&apos;s official website.</p></div></div><br /><br />' )
+
+var pageLayer = null
+var winW = getDisplayWindow().screen.width
+var winH = getDisplayWindow().screen.height
+var transformScale = 1
+
+function findWH(){	//echo LD-769
+	if (is.ie9) {
+	var vScrollAdj =  (is.ns ? 16 : 20);
+	winW = (is.ns) ? window.innerWidth - vScrollAdj : document.body.offsetWidth;
+	winH = (is.ns) ? window.innerHeight : document.body.offsetHeight;
+	}
+	else if (is.ie) {
+   winW = Math.max(Math.max(getDisplayDocument().body.scrollWidth, getDisplayDocument().documentElement.scrollWidth)-16,
+					  Math.max(getDisplayDocument().body.offsetWidth, getDisplayDocument().documentElement.offsetWidth)-16,
+					  Math.max(getDisplayDocument().body.clientWidth, getDisplayDocument().documentElement.clientWidth)-16 );
+   winH = Math.max(Math.max(getDisplayDocument().body.scrollHeight, getDisplayDocument().documentElement.scrollHeight)-16,
+					  Math.max(getDisplayDocument().body.offsetHeight, getDisplayDocument().documentElement.offsetHeight)-16,
+					  Math.max(getDisplayDocument().body.clientHeight, getDisplayDocument().documentElement.clientHeight)-16 );
+	}
+	else
+	{
+   winW =  getDisplayDocument().documentElement.clientWidth ? getDisplayDocument().documentElement.clientWidth : getDisplayDocument().body.clientWidth;
+   if(is.iOS && (navigator.userAgent.indexOf('CellCast-iPad') != -1 || navigator.userAgent.indexOf('CellCast-iPhone') != -1) )
+		 winW =  getScreenWidth();
+   winH =  getDisplayDocument().documentElement.clientHeight ? getDisplayDocument().documentElement.clientHeight : getDisplayDocument().body.clientHeight;
+	}
+}
+
+trivSetupPage();
+
+if ( isSppCapable() && window.trivPlayer === null ) setTimeout( function() { var objScrollTo = trivGetScrollObj(window.location.href); window.location.replace("index.html?jmptopg=page2.html#" + objScrollTo);}, 100)
+
+getDisplayWindow().appLectora = appLectora;
+
+appLectora.titlePubName = 'floating_notifications';
+appLectora.pageId = '2';
+appLectora.pageName = 'Page 1';
+appLectora.pagePubName = 'page2.html';
+appLectora.pageFileName = 'page2.html';
+appLectora.pageStartTimestamp = new Date();
+
+function ReFlow() {
+  findWH()
+  var pageEleWidth = pageLayer.ele.clientWidth;
+  if (  (is.ieAny || is.edge )  && pageLayer.ele.clientWidth == 0 && isSinglePagePlayerAvail()) pageEleWidth = parseFloat(GetPageWidth()) ;
+  if (pageLayer)
+  {
+     if(bTrivResponsive){
+    var left = (winW > pageEleWidth) ? (winW-pageEleWidth)/2 : 0
+    bReviewLink = window.myTop.document.getElementById('vBodyFrame');
+    transformScale = (winW > pageEleWidth) ? 1 : (winW/pageEleWidth) 
+    if(is.isMobile.any() || bReviewLink && typeof(getDisplayWindow().myTop)!='undefined' && getDisplayWindow().myTop._respView != 'Desktop')
+			left = 0
+    if(is.iOS && isInIframe( getDisplayWindow() , 0))
+			transformScale = (getScreenWidth() > pageEleWidth) ? 1 : (getScreenWidth()/pageEleWidth) 
+    var transSty = calculateScale();
+    pageLayer.moveTo( left, 0 );
+    pageLayer.hasMoved = true;
+    pageLayer.newX = left;
+    pageLayer.newY = 0;
+    if(CanScale()){
+       pageLayer.styObj.transform =  transSty;
+       pageLayer.styObj.webkitTransform =  transSty;
+    }else
+       transformScale = 1;
+    pageLayer.styObj.transformOrigin =  '0 0';
+     }
+    if(bDisableBrowserResize && !is.isMobile.any()){
+       var left = (winW > pageEleWidth) ? (winW-pageEleWidth)/2 : 0
+       bReviewLink = window.myTop.document.getElementById('vBodyFrame');
+       if(is.isMobile.any() || bReviewLink && typeof(getDisplayWindow().myTop)!='undefined' && getDisplayWindow().myTop._respView != 'Desktop')
+			left = 0
+       pageLayer.moveTo( left, 0 );
+       pageLayer.hasMoved = true;
+       pageLayer.newX = left;
+       pageLayer.newY = 0;
+    }
+    fillBrowser();
+    adjustAllObjectsForFixedPosition();
+    setfixed();
+  }
+}
+
+var arVariables = [];
+
+VarTrivSelCap = new Variable( 'VarTrivSelCap', 'none', 0, 0, null, null, 'floating_notifications', true )
+
+onload = responsiveInit
+detect();
+(window.myTop || window).onunload = finish
+
+function responsiveInit() {
+  pageLayer = new ObjLayer(GetCurrentPageID());
+  SaveStyles();
+  init();
+  adjustResponsivePage();
+  ReFlow();
+}
+
+function init() {
+  lectoraPreInit();
+  init11();
+}
+
+function init11() {
+  findWH()
+  if( is.min ){
+    trivPageTracking.InitPageTracking();
+    PreloadResources(new Array(button203,button2818,button3195,button3622,button4157,image119,text41))
+    pageLayer.show(true);
+    button203.init()
+    button2818.init()
+    button3195.init()
+    button3622.init()
+    button4157.init()
+    image119.init()
+    text41.init()
+    button203.activate()
+    button2818.activate()
+    button3195.activate()
+    button3622.activate()
+    button4157.activate()
+    image119.activate()
+    text41.activate()
+button203.strCookieState = (trivBtnTracking.GetRangeStatus(203,true));
+button203.loadStateFromSes("normalState");
+button2818.strCookieState = (trivBtnTracking.GetRangeStatus(2818,true));
+button2818.loadStateFromSes("normalState");
+button3195.strCookieState = (trivBtnTracking.GetRangeStatus(3195,true));
+button3195.loadStateFromSes("normalState");
+button3622.strCookieState = (trivBtnTracking.GetRangeStatus(3622,true));
+button3622.loadStateFromSes("normalState");
+button4157.strCookieState = (trivBtnTracking.GetRangeStatus(4157,true));
+button4157.loadStateFromSes("normalState");
+    var objToScroll = trivGetScrollObj(window.location.href) ;
+    trivScrollTo(window, objToScroll);
+    var titleManagerIndexWindow = (window && window.parent && window.parent.bIsTitleManagerIndexFile) ? window.parent : null;
+    if(titleManagerIndexWindow)  trivScrollTo(titleManagerIndexWindow, objToScroll);
+    if(!isSinglePagePlayerAvail()) postPageShowAction();
+    if( location.hash )
+    {
+      var newHash
+      if( location.hash.charAt(0) == '#' )
+        newHash = location.hash.slice( 1 )
+      else
+        newHash = location.hash
+      location.hash = newHash
+      if((typeof(bTrivRunView) != 'undefined'  && bTrivRunView) || (typeof(bTrivOffline) != 'undefined' && bTrivOffline)) window.scrollTo(0 , getTopofObj(document.getElementById(newHash)));
+    }
+    setTimeout( 'trivUpdateTOC( 1 )', 100 )
+    bPageLoaded = true;
+    ReFlow();
+    if(!isSinglePagePlayerAvail())
+       loadActions();
+  }
+  try {initGEV();} catch(e){}
+  lectoraPostInit();
+}
+  window.bLoadedVariables = true;
+function loadActions(){
+    if((window.bPageLoaded && window.bLoadedVariables && getDisplayWindow().pagePlayer &&
+	getDisplayWindow().pagePlayer.arLoadedPages && getDisplayWindow().pagePlayer.arLoadedPages.length == 1) || (window.bPageLoaded && window.bLoadedVariables && !isSinglePagePlayerAvail() )){
+       if(typeof(updateFLVPlayer) !== 'undefined') updateFLVPlayer();
+       postPageShowAction();
+    }
+    else
+      setTimeout(loadActions, 100);
+}
+function postPageShowAction(){
+  if ( trivPageTracking.GetRangeStatus(2) == 'notstarted' ) trivPageTracking.SetRangeStatus(2,2);
+}  
+
+var trivGoToPage = null
+var trivCompleteCnt = 1;
+var hasProcessedExitActions = false;
+var trivActFBCnt = 0;
+var currFeedbackIdx = 0;
+var trivPageExited = false;
+var trivInTest = false;
+
+function finish() {
+   if (window.finishCalled) return; 
+    window.finishCalled = true; 
+}
+
+function trivOnFocus() {
+    if( trivPageExited ) return
+}
+
+function checkLeavePage() {
+    if( trivPageExited ) return
+    if( trivActFBCnt == 0 )
+    {
+        currFeedbackIdx++;
+        if( currFeedbackIdx > -1)
+        {
+            trivLeavePage();
+          return;
+        }
+        else if( !checkQuestions( true ))
+          return;
+    }
+    setTimeout( 'checkLeavePage()', 100)
+}
+
+function trivExitPage( newPage, bFeedback ) {
+    if( newPage.indexOf( "ObjLayerAction" ) >= 0 || newPage.indexOf( "javascript:app." ) >= 0 || newPage.indexOf( ".action" ) >= 0 || newPage.indexOf( "history.back()" ) >= 0) trivGoToPage = newPage
+    else trivGoToPage = 'ObjLayerActionGoTo("' + newPage + '")'
+    if( !hasProcessedExitActions ) {
+        findWH()
+        hasProcessedExitActions = true
+        setTimeout( 'checkLeavePage()', 100)
+    }
+}
+
+function trivLeavePage() {
+    trivCompleteCnt--
+    if( trivCompleteCnt <= 0 ) {
+        saveVariable( 'TrivantisEPS', 'T');
+        hasProcessedExitActions = false;
+        if( trivGoToPage != null )
+        {
+			eval( trivGoToPage );
+			trivGoToPage = null;
+			if( window.closed ) trivPageExited = true;
+        }
+    }
+}
+
+function trivPrevPage() {
+}
+
+function trivNextPage() {
+}
+
+function trivUpdateTOC( bRecurse ) {
+    var i
+}
+
+function trivUpdateEntry() {
+}
+
+function trivResetEntry(entFld) {
+}
+
+function OnDeviceRotate() {
+
+}
+
+function action210(fn){
+    try{
+     nrzNotif('Great job! Thats correct. Plants use sunlight to create energy.', 'success', 7000);
+
+
+
+//syntax: nrzNotif('Notification Message', 'type', duration); 
+     } catch (e) {
+     alert('[OnMClkRunJS] ' + e);
+     }
+    if(fn && typeof(fn) == 'string' ) eval(fn);
+    else if(fn && typeof(fn) == 'function' ) fn();
+}
+
+function button203onUp() {
+  action210();
+}
+
+function action2819(fn){
+    try{
+     nrzNotif('Welcome to Lesson 3: Introduction to Photosynthesis', 'info', 7000);
+
+
+
+//syntax: nrzNotif('Notification Message', 'type', duration); 
+     } catch (e) {
+     alert('[OnMClkRunJS] ' + e);
+     }
+    if(fn && typeof(fn) == 'string' ) eval(fn);
+    else if(fn && typeof(fn) == 'function' ) fn();
+}
+
+function button2818onUp() {
+  action2819();
+}
+
+function action3196(fn){
+    try{
+     nrzNotif('Not quite. Remember, chlorophyll is key in capturing sunlight. Try again!', 'error', 7000);
+
+
+
+//syntax: nrzNotif('Notification Message', 'type', duration); 
+     } catch (e) {
+     alert('[OnMClkRunJS] ' + e);
+     }
+    if(fn && typeof(fn) == 'string' ) eval(fn);
+    else if(fn && typeof(fn) == 'function' ) fn();
+}
+
+function button3195onUp() {
+  action3196();
+}
+
+function action3623(fn){
+    try{
+     nrzNotif('5 minutes remaining in this section. Please finish up your responses.', 'warning', 7000);
+
+
+
+//syntax: nrzNotif('Notification Message', 'type', duration); 
+     } catch (e) {
+     alert('[OnMClkRunJS] ' + e);
+     }
+    if(fn && typeof(fn) == 'string' ) eval(fn);
+    else if(fn && typeof(fn) == 'function' ) fn();
+}
+
+function button3622onUp() {
+  action3623();
+}
+
+function action4158(fn){
+    try{
+     nrzNotif('Youre about to begin a 10-minute timed quiz. Are you ready to start?', 'question', 0);
+
+
+
+//syntax: nrzNotif('Notification Message', 'type', duration); 
+     } catch (e) {
+     alert('[OnMClkRunJS] ' + e);
+     }
+    if(fn && typeof(fn) == 'string' ) eval(fn);
+    else if(fn && typeof(fn) == 'function' ) fn();
+}
+
+function button4157onUp() {
+  action4158();
+}
+
+if( is.min ){
+button203 = new ObjButton('button203', 'Success Notification',37,434,345.000000,41.000000,1,19,'div','',1,0)
+button203.setUseSvgFile(1)
+button203.setFillStyle(1)
+button203.setUniqueFillID('page2_button203')
+button203.initRotateAngle(0,0,0,-0.000000,-0.000000,344,40)
+button203.initHasShadow(0)
+button203.initHasReflection(0)
+button203.setImages({"disabledState":"images/button203_disabled.png","downState":"images/button203_down.png","normalState":"images/button203.png","overState":"images/button203_over.png","selectedState":"images/button203_selected.png","visitedState":"images/button203_visited.png"});
+button203.setStateOpacity({"disabledState":1.0,"downState":1.0,"normalState":1.0,"overState":1.0,"selectedState":1.0,"visitedState":1.0});
+button203.addOpacity(100)
+button203.initImageMap('10,0,334,0,336,0,338,1,341,3,343,6,344,8,344,10,344,30,344,32,343,34,341,37,338,39,336,40,334,40,10,40,6,39,3,37,1,34,0,32,0,30,0,10,0,8,1,6,3,3,6,1,8,0,10,0','M 10.000000 0.000000 L 334.000000 0.000000 L 336.000000 0.187500 L 337.937500 0.812500 L 341.062500 2.937500 L 343.250000 6.125000 L 343.812500 8.000000 L 344.000000 10.000000 L 344.000000 30.000000 L 343.812500 32.000000 L 343.250000 33.937500 L 341.062500 37.062500 L 337.937500 39.250000 L 336.000000 39.812500 L 334.000000 40.000000 L 10.000000 40.000000 L 6.187500 39.250000 L 2.937500 37.125000 L 0.750000 33.875000 L 0.187500 32.000000 L 0.000000 30.000000 L 0.000000 10.000000 L 0.187500 8.000000 L 0.812500 6.125000 L 2.937500 2.937500 L 6.125000 0.812500 L 8.000000 0.187500 L 10.000000 0.000000 z')
+button203.setFills({"disabledState":{"fillInfo":"","stylePath":"fill:#52DF9E;\""},"downState":{"fillInfo":"","stylePath":"fill:#0BC46E;\""},"normalState":{"fillInfo":"","stylePath":"fill:#198754;\""},"overState":{"fillInfo":"","stylePath":"fill:#0BC46E;\""},"selectedState":{"fillInfo":"","screenRdr":"Selected","stylePath":"fill:#198754;\""},"visitedState":{"fillInfo":"","screenRdr":"Visited","stylePath":"fill:#198754;\""}});
+button203.setImgFillVal({"disabledState":{"B64":"","fill":"","style":""},"downState":{"B64":"","fill":"","style":""},"normalState":{"B64":"","fill":"","style":""},"overState":{"B64":"","fill":"","style":""},"selectedState":{"B64":"","fill":"","style":""},"visitedState":{"B64":"","fill":"","style":""}});
+button203.initLineWeight('0')
+button203.onUp = button203onUp
+button203.hasOnUp = true
+button203.capture=4
+button203.setTextVal({"disabledState":{"div":"div.button203disabledStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button203disabledStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"downState":{"div":"div.button203downStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button203downStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"normalState":{"div":"div.button203Text { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button203Text { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"overState":{"div":"div.button203overStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button203overStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"selectedState":{"div":"div.button203selectedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button203selectedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"visitedState":{"div":"div.button203visitedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button203visitedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"}});
+button203.text = 'Success Notification'
+button203.bSelectedEnabled = false;
+button203.bVisitedEnabled = false;
+button203.bOverEnabled = true;
+button203.bDownEnabled = true;
+button203.build()
+
+button2818 = new ObjButton('button2818', 'Info Notification',37,490,345.000000,41.000000,1,20,'div','',1,0)
+button2818.setUseSvgFile(1)
+button2818.setFillStyle(1)
+button2818.setUniqueFillID('page2_button2818')
+button2818.initRotateAngle(0,0,0,-0.000000,-0.000000,344,40)
+button2818.initHasShadow(0)
+button2818.initHasReflection(0)
+button2818.setImages({"disabledState":"images/button2818_disabled.png","downState":"images/button2818_down.png","normalState":"images/button2818.png","overState":"images/button2818_over.png","selectedState":"images/button2818_selected.png","visitedState":"images/button2818_visited.png"});
+button2818.setStateOpacity({"disabledState":1.0,"downState":1.0,"normalState":1.0,"overState":1.0,"selectedState":1.0,"visitedState":1.0});
+button2818.addOpacity(100)
+button2818.initImageMap('10,0,334,0,336,0,338,1,341,3,343,6,344,8,344,10,344,30,344,32,343,34,341,37,338,39,336,40,334,40,10,40,6,39,3,37,1,34,0,32,0,30,0,10,0,8,1,6,3,3,6,1,8,0,10,0','M 10.000000 0.000000 L 334.000000 0.000000 L 336.000000 0.187500 L 337.937500 0.812500 L 341.062500 2.937500 L 343.250000 6.125000 L 343.812500 8.000000 L 344.000000 10.000000 L 344.000000 30.000000 L 343.812500 32.000000 L 343.250000 33.937500 L 341.062500 37.062500 L 337.937500 39.250000 L 336.000000 39.812500 L 334.000000 40.000000 L 10.000000 40.000000 L 6.187500 39.250000 L 2.937500 37.125000 L 0.750000 33.875000 L 0.187500 32.000000 L 0.000000 30.000000 L 0.000000 10.000000 L 0.187500 8.000000 L 0.812500 6.125000 L 2.937500 2.937500 L 6.125000 0.812500 L 8.000000 0.187500 L 10.000000 0.000000 z')
+button2818.setFills({"disabledState":{"fillInfo":"","stylePath":"fill:#49D2E8;\""},"downState":{"fillInfo":"","stylePath":"fill:#0EDEFF;\""},"normalState":{"fillInfo":"","stylePath":"fill:#17A2B8;\""},"overState":{"fillInfo":"","stylePath":"fill:#0EDEFF;\""},"selectedState":{"fillInfo":"","screenRdr":"Selected","stylePath":"fill:#17A2B8;\""},"visitedState":{"fillInfo":"","screenRdr":"Visited","stylePath":"fill:#17A2B8;\""}});
+button2818.setImgFillVal({"disabledState":{"B64":"","fill":"","style":""},"downState":{"B64":"","fill":"","style":""},"normalState":{"B64":"","fill":"","style":""},"overState":{"B64":"","fill":"","style":""},"selectedState":{"B64":"","fill":"","style":""},"visitedState":{"B64":"","fill":"","style":""}});
+button2818.initLineWeight('0')
+button2818.onUp = button2818onUp
+button2818.hasOnUp = true
+button2818.capture=4
+button2818.setTextVal({"disabledState":{"div":"div.button2818disabledStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button2818disabledStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"downState":{"div":"div.button2818downStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button2818downStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"normalState":{"div":"div.button2818Text { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button2818Text { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"overState":{"div":"div.button2818overStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button2818overStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"selectedState":{"div":"div.button2818selectedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button2818selectedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"visitedState":{"div":"div.button2818visitedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button2818visitedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"}});
+button2818.text = 'Info Notification'
+button2818.bSelectedEnabled = false;
+button2818.bVisitedEnabled = false;
+button2818.bOverEnabled = true;
+button2818.bDownEnabled = true;
+button2818.build()
+
+button3195 = new ObjButton('button3195', 'Error Notification',37,546,345.000000,41.000000,1,21,'div','',1,0)
+button3195.setUseSvgFile(1)
+button3195.setFillStyle(1)
+button3195.setUniqueFillID('page2_button3195')
+button3195.initRotateAngle(0,0,0,-0.000000,-0.000000,344,40)
+button3195.initHasShadow(0)
+button3195.initHasReflection(0)
+button3195.setImages({"disabledState":"images/button3195_disabled.png","downState":"images/button3195_down.png","normalState":"images/button3195.png","overState":"images/button3195_over.png","selectedState":"images/button3195_selected.png","visitedState":"images/button3195_visited.png"});
+button3195.setStateOpacity({"disabledState":1.0,"downState":1.0,"normalState":1.0,"overState":1.0,"selectedState":1.0,"visitedState":1.0});
+button3195.addOpacity(100)
+button3195.initImageMap('10,0,334,0,336,0,338,1,341,3,343,6,344,8,344,10,344,30,344,32,343,34,341,37,338,39,336,40,334,40,10,40,6,39,3,37,1,34,0,32,0,30,0,10,0,8,1,6,3,3,6,1,8,0,10,0','M 10.000000 0.000000 L 334.000000 0.000000 L 336.000000 0.187500 L 337.937500 0.812500 L 341.062500 2.937500 L 343.250000 6.125000 L 343.812500 8.000000 L 344.000000 10.000000 L 344.000000 30.000000 L 343.812500 32.000000 L 343.250000 33.937500 L 341.062500 37.062500 L 337.937500 39.250000 L 336.000000 39.812500 L 334.000000 40.000000 L 10.000000 40.000000 L 6.187500 39.250000 L 2.937500 37.125000 L 0.750000 33.875000 L 0.187500 32.000000 L 0.000000 30.000000 L 0.000000 10.000000 L 0.187500 8.000000 L 0.812500 6.125000 L 2.937500 2.937500 L 6.125000 0.812500 L 8.000000 0.187500 L 10.000000 0.000000 z')
+button3195.setFills({"disabledState":{"fillInfo":"","stylePath":"fill:#E0515E;\""},"downState":{"fillInfo":"","stylePath":"fill:#F86A78;\""},"normalState":{"fillInfo":"","stylePath":"fill:#DC3545;\""},"overState":{"fillInfo":"","stylePath":"fill:#F86A78;\""},"selectedState":{"fillInfo":"","screenRdr":"Selected","stylePath":"fill:#DC3545;\""},"visitedState":{"fillInfo":"","screenRdr":"Visited","stylePath":"fill:#DC3545;\""}});
+button3195.setImgFillVal({"disabledState":{"B64":"","fill":"","style":""},"downState":{"B64":"","fill":"","style":""},"normalState":{"B64":"","fill":"","style":""},"overState":{"B64":"","fill":"","style":""},"selectedState":{"B64":"","fill":"","style":""},"visitedState":{"B64":"","fill":"","style":""}});
+button3195.initLineWeight('0')
+button3195.onUp = button3195onUp
+button3195.hasOnUp = true
+button3195.capture=4
+button3195.setTextVal({"disabledState":{"div":"div.button3195disabledStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3195disabledStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"downState":{"div":"div.button3195downStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3195downStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"normalState":{"div":"div.button3195Text { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3195Text { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"overState":{"div":"div.button3195overStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3195overStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"selectedState":{"div":"div.button3195selectedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3195selectedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"visitedState":{"div":"div.button3195visitedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3195visitedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"}});
+button3195.text = 'Error Notification'
+button3195.bSelectedEnabled = false;
+button3195.bVisitedEnabled = false;
+button3195.bOverEnabled = true;
+button3195.bDownEnabled = true;
+button3195.build()
+
+button3622 = new ObjButton('button3622', 'Warning Notification',37,602,345.000000,41.000000,1,22,'div','',1,0)
+button3622.setUseSvgFile(1)
+button3622.setFillStyle(1)
+button3622.setUniqueFillID('page2_button3622')
+button3622.initRotateAngle(0,0,0,-0.000000,-0.000000,344,40)
+button3622.initHasShadow(0)
+button3622.initHasReflection(0)
+button3622.setImages({"disabledState":"images/button3622_disabled.png","downState":"images/button3622_down.png","normalState":"images/button3622.png","overState":"images/button3622_over.png","selectedState":"images/button3622_selected.png","visitedState":"images/button3622_visited.png"});
+button3622.setStateOpacity({"disabledState":1.0,"downState":1.0,"normalState":1.0,"overState":1.0,"selectedState":1.0,"visitedState":1.0});
+button3622.addOpacity(100)
+button3622.initImageMap('10,0,334,0,336,0,338,1,341,3,343,6,344,8,344,10,344,30,344,32,343,34,341,37,338,39,336,40,334,40,10,40,6,39,3,37,1,34,0,32,0,30,0,10,0,8,1,6,3,3,6,1,8,0,10,0','M 10.000000 0.000000 L 334.000000 0.000000 L 336.000000 0.187500 L 337.937500 0.812500 L 341.062500 2.937500 L 343.250000 6.125000 L 343.812500 8.000000 L 344.000000 10.000000 L 344.000000 30.000000 L 343.812500 32.000000 L 343.250000 33.937500 L 341.062500 37.062500 L 337.937500 39.250000 L 336.000000 39.812500 L 334.000000 40.000000 L 10.000000 40.000000 L 6.187500 39.250000 L 2.937500 37.125000 L 0.750000 33.875000 L 0.187500 32.000000 L 0.000000 30.000000 L 0.000000 10.000000 L 0.187500 8.000000 L 0.812500 6.125000 L 2.937500 2.937500 L 6.125000 0.812500 L 8.000000 0.187500 L 10.000000 0.000000 z')
+button3622.setFills({"disabledState":{"fillInfo":"","stylePath":"fill:#FFCC32;\""},"downState":{"fillInfo":"","stylePath":"fill:#FFD455;\""},"normalState":{"fillInfo":"","stylePath":"fill:#FFC107;\""},"overState":{"fillInfo":"","stylePath":"fill:#FFD455;\""},"selectedState":{"fillInfo":"","screenRdr":"Selected","stylePath":"fill:#FFC107;\""},"visitedState":{"fillInfo":"","screenRdr":"Visited","stylePath":"fill:#FFC107;\""}});
+button3622.setImgFillVal({"disabledState":{"B64":"","fill":"","style":""},"downState":{"B64":"","fill":"","style":""},"normalState":{"B64":"","fill":"","style":""},"overState":{"B64":"","fill":"","style":""},"selectedState":{"B64":"","fill":"","style":""},"visitedState":{"B64":"","fill":"","style":""}});
+button3622.initLineWeight('0')
+button3622.onUp = button3622onUp
+button3622.hasOnUp = true
+button3622.capture=4
+button3622.setTextVal({"disabledState":{"div":"div.button3622disabledStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3622disabledStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#423c24;}"},"downState":{"div":"div.button3622downStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3622downStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#423c24;}"},"normalState":{"div":"div.button3622Text { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3622Text { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#423c24;}"},"overState":{"div":"div.button3622overStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3622overStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#423c24;}"},"selectedState":{"div":"div.button3622selectedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3622selectedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#423c24;}"},"visitedState":{"div":"div.button3622visitedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button3622visitedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#423c24;}"}});
+button3622.text = 'Warning Notification'
+button3622.bSelectedEnabled = false;
+button3622.bVisitedEnabled = false;
+button3622.bOverEnabled = true;
+button3622.bDownEnabled = true;
+button3622.build()
+
+button4157 = new ObjButton('button4157', 'Question Notification',37,658,345.000000,41.000000,1,23,'div','',1,0)
+button4157.setUseSvgFile(1)
+button4157.setFillStyle(1)
+button4157.setUniqueFillID('page2_button4157')
+button4157.initRotateAngle(0,0,0,-0.000000,-0.000000,344,40)
+button4157.initHasShadow(0)
+button4157.initHasReflection(0)
+button4157.setImages({"disabledState":"images/button4157_disabled.png","downState":"images/button4157_down.png","normalState":"images/button4157.png","overState":"images/button4157_over.png","selectedState":"images/button4157_selected.png","visitedState":"images/button4157_visited.png"});
+button4157.setStateOpacity({"disabledState":1.0,"downState":1.0,"normalState":1.0,"overState":1.0,"selectedState":1.0,"visitedState":1.0});
+button4157.addOpacity(100)
+button4157.initImageMap('10,0,334,0,336,0,338,1,341,3,343,6,344,8,344,10,344,30,344,32,343,34,341,37,338,39,336,40,334,40,10,40,6,39,3,37,1,34,0,32,0,30,0,10,0,8,1,6,3,3,6,1,8,0,10,0','M 10.000000 0.000000 L 334.000000 0.000000 L 336.000000 0.187500 L 337.937500 0.812500 L 341.062500 2.937500 L 343.250000 6.125000 L 343.812500 8.000000 L 344.000000 10.000000 L 344.000000 30.000000 L 343.812500 32.000000 L 343.250000 33.937500 L 341.062500 37.062500 L 337.937500 39.250000 L 336.000000 39.812500 L 334.000000 40.000000 L 10.000000 40.000000 L 6.187500 39.250000 L 2.937500 37.125000 L 0.750000 33.875000 L 0.187500 32.000000 L 0.000000 30.000000 L 0.000000 10.000000 L 0.187500 8.000000 L 0.812500 6.125000 L 2.937500 2.937500 L 6.125000 0.812500 L 8.000000 0.187500 L 10.000000 0.000000 z')
+button4157.setFills({"disabledState":{"fillInfo":"","stylePath":"fill:#9199A0;\""},"downState":{"fillInfo":"","stylePath":"fill:#8D98A1;\""},"normalState":{"fillInfo":"","stylePath":"fill:#6C757D;\""},"overState":{"fillInfo":"","stylePath":"fill:#8D98A1;\""},"selectedState":{"fillInfo":"","screenRdr":"Selected","stylePath":"fill:#6C757D;\""},"visitedState":{"fillInfo":"","screenRdr":"Visited","stylePath":"fill:#6C757D;\""}});
+button4157.setImgFillVal({"disabledState":{"B64":"","fill":"","style":""},"downState":{"B64":"","fill":"","style":""},"normalState":{"B64":"","fill":"","style":""},"overState":{"B64":"","fill":"","style":""},"selectedState":{"B64":"","fill":"","style":""},"visitedState":{"B64":"","fill":"","style":""}});
+button4157.initLineWeight('0')
+button4157.onUp = button4157onUp
+button4157.hasOnUp = true
+button4157.capture=4
+button4157.setTextVal({"disabledState":{"div":"div.button4157disabledStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button4157disabledStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"downState":{"div":"div.button4157downStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button4157downStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"normalState":{"div":"div.button4157Text { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button4157Text { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"overState":{"div":"div.button4157overStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button4157overStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"selectedState":{"div":"div.button4157selectedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button4157selectedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"},"visitedState":{"div":"div.button4157visitedStateText { position:absolute; top:0.000000px; left:0.000000px; display:flex; justify-content:center; align-items:center; width:344.000000px; height:40.000000px;}","span":"span.button4157visitedStateText { width:336.000000px; margin-right:5px; margin-left:5px; text-align:center; line-height:16px; font-size:16px; font-family:\"Lucida Sans Unicode\"; font-weight:bold; color:#ffffff;}"}});
+button4157.text = 'Question Notification'
+button4157.bSelectedEnabled = false;
+button4157.bVisitedEnabled = false;
+button4157.bOverEnabled = true;
+button4157.bDownEnabled = true;
+button4157.build()
+
+image119 = new ObjImage('image119','images/image_118.jpg','Image',142,791,119,55,1,7,'div',null, 0 )
+image119.initRotateAngle(0,0,0,0,0,0,0)
+image119.initHasShadow(0)
+image119.initHasReflection(0)
+image119.addIe8Attr(142, 791, 119, 55, 0, 0)
+image119.initImageMap(1,'0,0,119,0,119,55,0,55,0,0','M 0 0 L 119 0 L 119 55 L 0 55 L 0 0 z')
+image119.addBorder(0)
+image119.addOpacity(100)
+image119.build()
+
+text41 = new ObjText('text41',null,21,265,383,137,1,8,null,'div',null,0 )
+text41.initSLine(0)
+text41.initHasBullet(0)
+text41.initRotateAngle(0,0,0)
+text41.initHasOuterShadow(0)
+text41.initHasTextShadow(0)
+text41.initHasBorder(0)
+text41.initHasOutline(0)
+text41.initHasMargin(0)
+text41.addIe8Attr(21, 265, 383, 137, 0, 0)
+text41.addHeading(0)
+text41.addOpacity(100)
+text41.arrCSSStyles = new Array();
+text41.arrCSSStyles.push('span.text41Font1 { font-size:36px; font-family:"Arial", sans-serif; color:#000000; font-weight:bold;}');
+text41.arrCSSStyles.push('span.text41Font2 { font-size:37px; font-family:"Arial", sans-serif; color:#000000; font-weight:bold;}');
+text41.arrCSSStyles.push('span.text41Font3 { font-size:77px; font-family:"Arial", sans-serif; color:#000000; font-weight:bold;}');
+text41.arrCSSStyles.push('span.text41Font4 { font-size:37px; font-family:"Arial", sans-serif; color:#000000;}');
+text41.addInnerText('<div id=\"text41\" aria-hidden=\"true\" ><p  legLH=\"1.163\" style=\"margin-left:0px;text-indent:0px;line-height:1.163;margin-top:0px;margin-bottom:0px;text-align:left;\" >\n<span class=\"text41Font1\"  >Floating Notifications</span ><span class=\"text41Font2\" style=\"background-color:transparent\" >\n</span ></p >\n<p  style=\"margin-left:0px;text-indent:0px;margin-top:0px;margin-bottom:0px;text-align:left;\" >\n<span class=\"text41Font3\"  >in Lectora</span ><span class=\"text41Font4\" style=\"background-color:transparent\" >\n</span ></p >\n</div>\n');
+text41.build()
+
+arObjs.push(button203);
+arObjs.push(button2818);
+arObjs.push(button3195);
+arObjs.push(button3622);
+arObjs.push(button4157);
+arObjs.push(image119);
+arObjs.push(text41);
+
+
+writeStyleSheets(arObjs);}
+// -->
+
+</script>
+</head>
+
+<body onfocus="trivOnFocus()" onResize="ReFlow()">
+
+    <DIV style="visibility:hidden;" id="pageDIV" class="pageDIV">
+   </DIV>
+<script>
+if( is.min ){
+    findWH()
+    var left = (winW > 430) ? (winW-430)/2 : 0
+    document.write('<style type="text/css">.pageDIV { position: absolute; top:0px; left: ' + left + 'px; width:430px; height:932px; clip:rect(0px 430px 932px 0px); overflow:hidden;' )
+    if(is.iOS)
+		document.write('-webkit-text-size-adjust:100%;')
+    document.write('} </style>')
+}
+</script>
+
+<script>
+if( is.min ){
+    appendElement(button203, null, null);
+    appendElement(button2818, null, null);
+    appendElement(button3195, null, null);
+    appendElement(button3622, null, null);
+    appendElement(button4157, null, null);
+    appendElement(image119, null, null);
+    appendElement(text41, null, null);
+}
+</script>
+
+</body>
+</html>
